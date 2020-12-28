@@ -1,13 +1,29 @@
 <h1>Ajax#home</h1>
 <p>Find me in app/views/ajax/home.html.erb</p>
+
+<!-- Todos -->
 <button id="list-todos" type="button">List todos</button><br>
-<label>title</label><input id="todo-title"><label>created by</label>
-<input id="todo-created-by"><button id="create-todo" type="button">Create todo</button><br>
-<div id="results-div"></div>
+
+<label>title</label><input id="todo-title">
+<label>created by</label><input id="todo-created-by">
+<button id="create-todo" type="button">Create todo</button><br>
+<div id="results-div"></div><br>
+
+<!-- Todo Items -->
+<label>Parent todo ID</label><input id="list-items-parent-id">
+<button id="list-items" type="button">List todo items</button><br>
+
+<label>Parent todo ID</label><input id="create-item-parent-id">
+<label>Name</label><input id="create-item-name">
+<label>Done?</label><input type="checkbox" id="create-item-done">
+<button id="create-item" type="button">Create todo item</button><br>
+<div id="item-results-div"></div><br>
+
 <script>
 document.addEventListener('DOMContentLoaded', (event) => {
   console.log('DOM fully loaded and parsed');
   const resultsDiv = document.getElementById('results-div');
+  const itemResultsDiv = document.getElementById('item-results-div');
 
   const listTodosButton = document.getElementById('list-todos');
   listTodosButton.addEventListener('click', (event) => { // event handler for the list todos button
@@ -30,6 +46,30 @@ document.addEventListener('DOMContentLoaded', (event) => {
     eventRequest.open('GET', 'http://localhost:3001/todos');  // this is the URL and method for listing todos
     eventRequest.send();  // here we send the request.  Note that it is asynchronous, so you need an event handler
   });
+
+    const listItemsButton = document.getElementById('list-items');
+    const listItemsParentId = document.getElementById('list-items-parent-id');
+    listItemsButton.addEventListener('click', (event) => { // event handler for the list todos button
+      var eventRequest = new XMLHttpRequest(); // we create this to set up for the Ajax call
+      eventRequest.onreadystatechange = function () { // event handler for the ajax call
+        if(eventRequest.readyState === XMLHttpRequest.DONE) { // only handle DONE
+          if  (eventRequest.status === 200) { // we expect a 200 from a GET
+            itemResultsDiv.innerHTML=''; // Clear out this resultsDiv
+            var jsonArr = JSON.parse(eventRequest.responseText); // we get an array of objects in JSON format
+            for (let i=0; i<jsonArr.length; i+=1) {
+              let parag = document.createElement('P');
+              parag.textContent = JSON.stringify(jsonArr[i]); // each is a todo object, which we convert to a string for display
+              itemResultsDiv.appendChild(parag); // and add it to the div
+            }
+          } else {
+            alert(`Return code ${eventRequest.status} ${eventRequest.statusText}`); // this is how we report errors
+          }
+        }
+      };
+      eventRequest.open('GET', `http://localhost:3001/todos/${listItemsParentId.value}/items/`);  // this is the URL and method for listing todos
+      eventRequest.send();  // here we send the request.  Note that it is asynchronous, so you need an event handler
+    });
+
   const createTodoButton = document.getElementById('create-todo');
   const todoTitle = document.getElementById('todo-title');
   const todoCreatedBy = document.getElementById('todo-created-by')
@@ -47,6 +87,28 @@ document.addEventListener('DOMContentLoaded', (event) => {
     eventRequest.open('POST', 'http://localhost:3001/todos');  // method and URL to create a todo
     eventRequest.setRequestHeader("Content-Type", "application/json");  // always do this on POST or PUT
     let dataToSend = `{"title": "${todoTitle.value}", "created_by": "${todoCreatedBy.value}"}` // JSON for the create
+    console.log("sending data:",dataToSend)
+    eventRequest.send(dataToSend);
+  });
+
+  const createItemButton = document.getElementById('create-item');
+  const createItemParentId = document.getElementById('create-item-parent-id');
+  const createItemName = document.getElementById('create-item-name');
+  const createItemDone = document.getElementById('create-item-done')
+  createItemButton.addEventListener('click', (event) => {
+    var eventRequest = new XMLHttpRequest();
+    eventRequest.onreadystatechange = function () {
+      if(eventRequest.readyState === XMLHttpRequest.DONE) {
+        if  (eventRequest.status === 201) {     // this is the expected return code for a POST to create a todo
+          itemResultsDiv.textContent=eventRequest.responseText; // this will be the todo that is created
+        } else {
+          alert(`Return code ${eventRequest.status} ${eventRequest.statusText} ${eventRequest.responseText}`);  // error handling
+        }
+      }
+    };
+    eventRequest.open('POST', `http://localhost:3001/todos/${createItemParentId.value}/items/`);  // method and URL to create a todo
+    eventRequest.setRequestHeader("Content-Type", "application/json");  // always do this on POST or PUT
+    let dataToSend = `{"name": "${createItemName.value}", "done": "${createItemDone.checked}"}` // JSON for the create
     console.log("sending data:",dataToSend)
     eventRequest.send(dataToSend);
   });
